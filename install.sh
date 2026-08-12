@@ -24,23 +24,35 @@ if ! docker compose version >/dev/null 2>&1; then
   exit 1
 fi
 
+gen_secret() {
+  openssl rand -hex 32 2>/dev/null || head -c 64 /dev/urandom | od -An -tx1 | tr -d ' \n' | head -c 64
+}
+
 if [[ ! -f .env ]]; then
   DB_PASSWORD="$(openssl rand -hex 24 2>/dev/null || head -c 48 /dev/urandom | od -An -tx1 | tr -d ' \n')"
+  AXIOM_SECRET_KEY="$(gen_secret)"
   cat > .env <<ENV
 HCP_PORT=8787
 POSTGRES_DB=homelab
 POSTGRES_USER=homelab
 POSTGRES_PASSWORD=${DB_PASSWORD}
+AXIOM_SECRET_KEY=${AXIOM_SECRET_KEY}
 ENV
   chmod 600 .env
-  echo "Generated .env with a unique database password."
+  echo "Generated .env with unique database and Axiom encryption secrets."
+else
+  if ! grep -q '^AXIOM_SECRET_KEY=' .env; then
+    printf '\nAXIOM_SECRET_KEY=%s\n' "$(gen_secret)" >> .env
+    chmod 600 .env
+    echo "Added the Axiom encryption key required for Proxmox credentials."
+  fi
 fi
 
 docker compose up -d --build
 
 IP="$(hostname -I 2>/dev/null | awk '{print $1}' || true)"
-PORT="$(grep '^HCP_PORT=' .env | cut -d= -f2 || echo 8787)"
+PORT="$(grep '^HCP_PORT=' .env | tail -1 | cut -d= -f2 || echo 8787)"
 echo
-echo "Homelab Control Plane is starting."
+echo "Axiom is starting."
 echo "Open: http://${IP:-localhost}:${PORT}"
-echo "Create the owner account on first launch."
+echo "Existing data has been retained; database migrations run automatically."

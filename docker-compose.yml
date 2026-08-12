@@ -23,6 +23,7 @@ services:
     environment:
       DATABASE_URL: postgres://${POSTGRES_USER:-homelab}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB:-homelab}?sslmode=disable
       LISTEN_ADDR: :8080
+      AXIOM_SECRET_KEY: ${AXIOM_SECRET_KEY}
     depends_on:
       postgres:
         condition: service_healthy
