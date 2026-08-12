@@ -4,10 +4,36 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <meta name="theme-color" content="#0a0d12" />
-    <title>Homelab Control Plane</title>
+    <title>Axiom</title>
   </head>
   <body>
     <div id="root"></div>
+    <script>
+      if (!navigator.clipboard) {
+        Object.defineProperty(navigator, 'clipboard', {
+          value: {
+            writeText: function (text) {
+              return new Promise(function (resolve, reject) {
+                var area = document.createElement('textarea')
+                area.value = text
+                area.setAttribute('readonly', '')
+                area.style.position = 'fixed'
+                area.style.opacity = '0'
+                document.body.appendChild(area)
+                area.select()
+                try {
+                  document.execCommand('copy') ? resolve() : reject(new Error('Copy failed'))
+                } catch (error) {
+                  reject(error)
+                } finally {
+                  document.body.removeChild(area)
+                }
+              })
+            }
+          }
+        })
+      }
+    </script>
     <script type="module" src="/src/main.tsx"></script>
   </body>
 </html>
