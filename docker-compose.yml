@@ -1,0 +1,39 @@
+services:
+  postgres:
+    image: postgres:17-alpine
+    container_name: hcp-postgres
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB:-homelab}
+      POSTGRES_USER: ${POSTGRES_USER:-homelab}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+    volumes:
+      - hcp_postgres:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-homelab} -d ${POSTGRES_DB:-homelab}"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+    restart: unless-stopped
+
+  api:
+    build: ./api
+    container_name: hcp-api
+    environment:
+      DATABASE_URL: postgres://${POSTGRES_USER:-homelab}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB:-homelab}?sslmode=disable
+      LISTEN_ADDR: :8080
+    depends_on:
+      postgres:
+        condition: service_healthy
+    restart: unless-stopped
+
+  web:
+    build: ./web
+    container_name: hcp-web
+    ports:
+      - "${HCP_PORT:-8787}:80"
+    depends_on:
+      - api
+    restart: unless-stopped
+
+volumes:
+  hcp_postgres:
