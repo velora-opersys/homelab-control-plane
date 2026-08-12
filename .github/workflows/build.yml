@@ -1,0 +1,64 @@
+name: Build
+
+on:
+  push:
+    branches: [main, "fix/**", "agent/**"]
+  pull_request:
+    branches: [main]
+
+jobs:
+  api:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: api
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
+        with:
+          go-version: '1.23.x'
+          cache-dependency-path: api/go.mod
+      - name: Resolve modules
+        run: go mod tidy && go mod verify
+      - name: Test API
+        run: go test ./...
+      - name: Build API
+        run: CGO_ENABLED=0 GOOS=linux go build -trimpath -ldflags='-s -w' -o /tmp/axiom-api .
+
+  agent:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: agent
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
+        with:
+          go-version: '1.23.x'
+          cache-dependency-path: agent/go.mod
+      - name: Build Linux agent
+        run: CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -o /tmp/axiom-agent-linux-amd64 .
+      - name: Build Windows agent
+        run: CGO_ENABLED=0 GOOS=windows GOARCH=amd64 go build -o /tmp/axiom-agent-windows-amd64.exe .
+
+  web:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: web
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Install dependencies
+        run: npm install
+      - name: Build web
+        run: npm run build
+
+  docker:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Build API and web images
+        run: docker compose build api web
