@@ -1,7 +1,7 @@
 services:
   postgres:
     image: postgres:17-alpine
-    container_name: hcp-postgres
+    container_name: axiom-postgres
     environment:
       POSTGRES_DB: ${POSTGRES_DB:-homelab}
       POSTGRES_USER: ${POSTGRES_USER:-homelab}
@@ -16,8 +16,10 @@ services:
     restart: unless-stopped
 
   api:
-    build: ./api
-    container_name: hcp-api
+    build:
+      context: .
+      dockerfile: api/Dockerfile
+    container_name: axiom-api
     environment:
       DATABASE_URL: postgres://${POSTGRES_USER:-homelab}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB:-homelab}?sslmode=disable
       LISTEN_ADDR: :8080
@@ -28,7 +30,7 @@ services:
 
   web:
     build: ./web
-    container_name: hcp-web
+    container_name: axiom-web
     ports:
       - "${HCP_PORT:-8787}:80"
     depends_on:
